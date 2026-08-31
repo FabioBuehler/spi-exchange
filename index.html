@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPI Global Exchange</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root{
+  --teal-900:#0b3948;
+  --teal-700:#0f5f68;
+  --teal-500:#1c8e85;
+  --green-500:#4fa567;
+  --green-300:#93c94a;
+  --yellow-400:#d7de1f;
+  --yellow-300:#eaec86;
+  --hold:#b5b199;
+  --stopped:#6d6a5e;
+  --ink:#122229;
+  --ink-soft:#4b5c60;
+  --paper:#fbfbf7;
+  --paper-dim:#f2f1ea;
+  --line:#e2e3d9;
+  --white:#ffffff;
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+
+/* ---------- Header ---------- */
+.hero{position:relative;overflow:hidden;padding-bottom:56px;}
+.hero-bg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.hero-inner{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:44px 28px 0;color:var(--white);}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;margin-bottom:10px;}
+.hero h1{font-size:clamp(30px,4.5vw,46px);line-height:1.05;max-width:640px;}
+.hero p.sub{max-width:520px;margin-top:12px;font-size:15.5px;line-height:1.55;opacity:.92;}
+.hero-stats{display:flex;gap:28px;margin-top:26px;flex-wrap:wrap;}
+.hero-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;opacity:.9;}
+.hero-stat b{display:block;font-family:'Fraunces',serif;font-size:22px;font-weight:600;}
+
+/* ---------- Nav ---------- */
+.nav-wrap{max-width:1100px;margin:-30px auto 0;padding:0 28px;position:relative;z-index:3;}
+.nav{display:flex;gap:6px;background:var(--white);border:1px solid var(--line);border-radius:999px;padding:5px;box-shadow:0 6px 22px rgba(11,57,72,.10);width:fit-content;}
+.nav button{
+  border:none;background:transparent;padding:9px 18px;border-radius:999px;
+  font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;color:var(--ink-soft);cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.nav button.active{background:var(--teal-900);color:var(--white);}
+.nav button:hover:not(.active){background:var(--paper-dim);}
+
+.container{max-width:1100px;margin:0 auto;padding:34px 28px 80px;}
+
+/* ---------- Legend ---------- */
+.legend{display:flex;gap:0;margin:0 0 10px;border-radius:999px;overflow:hidden;border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.legend span{flex:1;text-align:center;padding:8px 6px;color:var(--white);}
+.legend .lbl-idea{background:var(--teal-900);}
+.legend .lbl-exploration{background:var(--teal-500);}
+.legend .lbl-inprogress{background:var(--green-500);}
+.legend .lbl-incubation{background:var(--green-300);color:var(--ink);}
+.legend .lbl-scalability{background:var(--yellow-400);color:var(--ink);}
+.legend-paused{display:flex;gap:8px;margin:0 0 30px;font-family:'IBM Plex Mono',monospace;font-size:11px;align-items:center;}
+.legend-paused .tag{color:var(--ink-soft);margin-right:2px;}
+.legend-paused span.pill{padding:5px 12px;border-radius:999px;color:var(--white);}
+.legend-paused .lbl-onhold{background:var(--hold);color:var(--ink);}
+.legend-paused .lbl-stopped{background:var(--stopped);}
+
+/* ---------- Region cards (Dashboard) ---------- */
+.section-title{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;}
+.section-title h2{font-size:20px;}
+.section-title span{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:38px;}
+.rcard{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:20px;cursor:pointer;transition:transform .15s, box-shadow .15s;}
+.rcard:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(11,57,72,.10);}
+.rcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.rcode{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--white);background:var(--teal-900);padding:4px 9px;border-radius:6px;}
+.rcard-top .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+.rcard h3{font-size:17px;margin-bottom:4px;}
+.rcard .lead{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;}
+.statusbar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--paper-dim);}
+.statusbar div{height:100%;}
+
+/* ---------- Exchange mode ---------- */
+.stops{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;}
+.stop-pill{border:1px solid var(--line);background:var(--white);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-soft);}
+.stop-pill.active{background:var(--teal-900);border-color:var(--teal-900);color:var(--white);}
+.exchange-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+.exchange-head h2{font-size:26px;}
+.exchange-head .lead-tag{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.nav-arrows{display:flex;gap:8px;}
+.arrow-btn{border:1px solid var(--line);background:var(--white);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px;}
+.arrow-btn:hover{background:var(--paper-dim);}
+.arrow-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+.panel{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:22px;}
+.panel h4{font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);margin-bottom:16px;}
+
+.pcard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:var(--paper);}
+.pcard:last-child{margin-bottom:0;}
+.pcard.is-archived{opacity:.7;background:var(--paper-dim);}
+.pcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.pcard-fields{flex:1;min-width:200px;}
+.pcard-name-input{
+  font-weight:600;font-size:14.5px;border:none;background:transparent;width:100%;padding:2px 0;
+  font-family:'Inter',sans-serif;color:var(--ink);
+}
+.pcard-name-input:focus{outline:none;border-bottom:1px solid var(--teal-500);}
+.pcard-lead-input{
+  font-size:12px;color:var(--ink-soft);border:none;background:transparent;width:100%;padding:1px 0;margin-top:2px;
+  font-family:'Inter',sans-serif;
+}
+.pcard-lead-input:focus{outline:none;border-bottom:1px solid var(--teal-500);}
+.pcard-lead-input::placeholder{color:#a9b3af;}
+select.status-select{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;border:none;border-radius:6px;padding:5px 10px;color:var(--white);cursor:pointer;
+}
+.pcard-actions{display:flex;gap:14px;margin-top:10px;justify-content:flex-end;}
+.pcard-actions button{
+  border:none;background:none;cursor:pointer;font-size:11.5px;font-family:'IBM Plex Mono',monospace;
+  color:var(--ink-soft);text-decoration:underline;padding:0;
+}
+.pcard-actions button.danger{color:#b3492f;}
+
+.add-project-form{border:1px dashed var(--line);border-radius:10px;padding:14px 16px;margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.add-project-form input[type=text]{flex:1;min-width:160px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:'Inter',sans-serif;}
+.add-project-form button{border:none;background:var(--teal-900);color:var(--white);border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+.add-project-toggle{
+  border:1px dashed var(--line);border-radius:10px;padding:12px 16px;margin-top:6px;width:100%;background:none;
+  text-align:left;color:var(--ink-soft);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.add-project-toggle:hover{background:var(--paper-dim);}
+
+.archived-toggle{
+  margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);
+  cursor:pointer;text-decoration:underline;background:none;border:none;padding:0;
+}
+.archived-list{margin-top:12px;}
+
+.pcard-image-wrap{margin-top:10px;position:relative;}
+.pcard-image{width:100%;max-height:180px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block;}
+.img-loading{font-size:12px;color:var(--ink-soft);padding:10px 0;}
+.photo-row{display:flex;gap:14px;align-items:center;margin-top:8px;}
+.photo-label{
+  font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:var(--teal-700);cursor:pointer;text-decoration:underline;
+}
+.photo-label input[type=file]{display:none;}
+.remove-photo{border:none;background:none;color:#b3492f;font-size:11.5px;font-family:'IBM Plex Mono',monospace;cursor:pointer;text-decoration:underline;padding:0;}
+.st-idea{background:var(--teal-900);}
+.st-exploration{background:var(--teal-500);}
+.st-inprogress{background:var(--green-500);}
+.st-incubation{background:var(--green-300);color:var(--ink);}
+.st-scalability{background:var(--yellow-400);color:var(--ink);}
+.st-onhold{background:var(--hold);color:var(--ink);border:1px dashed rgba(0,0,0,.25) !important;}
+.st-stopped{background:var(--stopped);border:1px dashed rgba(255,255,255,.35) !important;}
+
+.pcard textarea{
+  width:100%;margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+  font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:38px;background:var(--white);color:var(--ink);
+}
+.tasklist{margin-top:10px;}
+.task-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;}
+.task-row input[type=checkbox]{accent-color:var(--teal-700);width:15px;height:15px;}
+.task-row.done span.txt{text-decoration:line-through;color:var(--ink-soft);}
+.task-row .del{margin-left:auto;background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:15px;}
+.addtask{display:flex;gap:6px;margin-top:8px;}
+.addtask input{flex:1;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;font-family:'Inter',sans-serif;}
+.addtask button{border:none;background:var(--teal-700);color:var(--white);border-radius:7px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+
+.snap-region{margin-bottom:14px;}
+.snap-region:last-child{margin-bottom:0;}
+.snap-region-name{font-weight:600;font-size:13px;margin-bottom:6px;color:var(--teal-900);}
+.snap-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);gap:10px;}
+.snap-row:last-child{border-bottom:none;}
+.snap-badge{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;border-radius:5px;color:var(--white);white-space:nowrap;}
+
+.sessionbox textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:'Inter',sans-serif;font-size:13.5px;}
+.sessionbox button{margin-top:8px;border:none;background:var(--teal-900);color:var(--white);padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+.log-entry{border-left:3px solid var(--teal-500);padding:6px 0 6px 12px;margin-top:10px;font-size:13px;}
+.log-entry-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.log-actions{display:flex;gap:10px;flex-shrink:0;}
+.log-actions button{border:none;background:none;color:var(--ink-soft);font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;text-decoration:underline;padding:0;}
+.log-actions button.danger{color:#b3492f;}
+.log-edit-box textarea{width:100%;min-height:60px;margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:8px;font-family:'Inter',sans-serif;font-size:13px;}
+.log-edit-box{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.log-edit-box .row{display:flex;gap:8px;}
+.log-edit-box button{border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.log-edit-box .save-btn{background:var(--teal-900);color:var(--white);}
+.log-edit-box .cancel-btn{background:var(--paper-dim);color:var(--ink-soft);}
+.log-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+
+/* ---------- Prep ---------- */
+.prep-add-form{border:1px dashed var(--line);border-radius:10px;padding:14px 16px;margin-bottom:24px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.prep-add-form input[type=text]{flex:1;min-width:200px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:'Inter',sans-serif;}
+.prep-add-form select{border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:'Inter',sans-serif;background:var(--white);}
+.prep-add-form button{border:none;background:var(--teal-900);color:var(--white);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+.prep-group{margin-bottom:22px;}
+.prep-group h4{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:6px;}
+.prep-row{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--line);}
+.prep-row:last-child{border-bottom:none;}
+.prep-row input[type=checkbox]{accent-color:var(--teal-700);width:15px;height:15px;flex-shrink:0;}
+.prep-text-input{flex:1;border:none;background:transparent;font-family:'Inter',sans-serif;font-size:13.5px;padding:2px 0;color:var(--ink);}
+.prep-text-input:focus{outline:none;border-bottom:1px solid var(--teal-500);}
+.prep-row.done .prep-text-input{text-decoration:line-through;color:var(--ink-soft);}
+.prep-row .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;flex-shrink:0;}
+
+.prep-row-all{padding:8px 0;border-bottom:1px dashed var(--line);}
+.prep-row-all:last-child{border-bottom:none;}
+.prep-region-grid{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px 0;padding-left:2px;}
+.prep-region-chip{
+  display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--ink-soft);
+}
+.prep-region-chip input{accent-color:var(--teal-700);width:12px;height:12px;}
+.prep-region-chip.checked{background:var(--teal-900);color:var(--white);border-color:var(--teal-900);}
+
+.exchange-prep-add{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;}
+.exchange-prep-add input[type=text]{flex:1;min-width:150px;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;font-family:'Inter',sans-serif;}
+.exchange-prep-add label{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+.exchange-prep-add button{border:none;background:var(--teal-700);color:var(--white);border-radius:7px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+
+/* ---------- Tasks tab ---------- */
+.filterbar{display:flex;gap:8px;margin-bottom:20px;}
+.filterbar button{border:1px solid var(--line);background:var(--white);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-soft);}
+.filterbar button.active{background:var(--teal-900);color:var(--white);border-color:var(--teal-900);}
+.taskgroup{margin-bottom:22px;}
+.taskgroup h4{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:10px;}
+.tg-project{font-size:12px;color:var(--ink-soft);margin:10px 0 4px;}
+.empty{padding:40px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
+
+footer{max-width:1100px;margin:0 auto;padding:20px 28px 40px;font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+footer button{background:none;border:none;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-size:11.5px;font-family:'Inter',sans-serif;padding:0;}
+.footer-actions{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
+.footer-link{color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-size:11.5px;}
+.footer-link input[type=file]{display:none;}
+.save-status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal-700);min-width:70px;transition:opacity .3s;}
+
+.banner-wrap{max-width:1100px;margin:0 auto;padding:0 28px;}
+.backup-banner{
+  display:none;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:#fbf6d9;border:1px solid var(--yellow-400);color:var(--ink);border-radius:12px;
+  padding:12px 18px;margin:0 0 20px;font-size:13px;
+}
+.backup-banner .banner-actions{display:flex;gap:14px;flex-shrink:0;}
+.backup-banner button{border:none;background:none;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--teal-900);text-decoration:underline;padding:0;}
+.backup-banner button#bannerDismissBtn{color:var(--ink-soft);font-weight:500;}
+
+@media (max-width:640px){
+  .hero-inner{padding:32px 18px 0;}
+  .nav-wrap{padding:0 18px;}
+  .container{padding:26px 18px 60px;}
+  .rcard-top{flex-direction:column;gap:8px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <svg class="hero-bg" viewBox="0 0 1200 420" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="20%">
+        <stop offset="0%" stop-color="#0b3948"/>
+        <stop offset="45%" stop-color="#12808a"/>
+        <stop offset="72%" stop-color="#5cb15e"/>
+        <stop offset="100%" stop-color="#dfe61c"/>
+      </linearGradient>
+    </defs>
+    <path d="M0,0 H1200 V300 C 900,400 320,400 0,300 Z" fill="url(#g1)"/>
+  </svg>
+  <div class="hero-inner">
+    <div class="eyebrow">Manufacturing · Logistics · Supply Chain</div>
+    <h1>Global SPI Exchange</h1>
+    <p class="sub">Smart Production &amp; Innovation — a running record of what every region is building, and the shared thread that connects them.</p>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+</div>
+
+<div class="nav-wrap">
+  <div class="nav" id="mainNav">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="prep">Prep</button>
+    <button data-tab="exchange">Exchange Mode</button>
+    <button data-tab="tasks">Follow-up Tasks</button>
+  </div>
+</div>
+
+<div class="banner-wrap">
+  <div class="backup-banner" id="backupBanner">
+    <span class="msg"></span>
+    <span class="banner-actions">
+      <button id="bannerExportBtn">Export now</button>
+      <button id="bannerDismissBtn">Not now</button>
+    </span>
+  </div>
+</div>
+
+<div class="container" id="container"></div>
+
+<footer>
+  <span id="storageNotice">Connecting…</span>
+  <span id="saveStatus" class="save-status"></span>
+  <span class="footer-actions">
+    <button id="exportBtn">Export backup</button>
+    <label class="footer-link">Import backup<input type="file" id="importInput" accept="application/json"></label>
+    <button id="resetBtn">Clear session notes &amp; prep</button>
+  </span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = "https://liolhblaifyverolafdg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpb2xoYmxhaWZ5dmVyb2xhZmRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODIwNjMsImV4cCI6MjEwMzc1ODA2M30.yIG8JF3D-S2FWQU8zj3UZmbcSz5pfP4io3FzeJuZLkw";
+let sb = null;
+try{
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}catch(e){ console.error('Supabase init failed', e); }
+
+const STATUS_ORDER = ['Idea','Exploration','In-Progress','Incubation','Scalability'];
+const STATUS_PAUSED = ['On Hold','Stopped'];
+const STATUS_ALL = STATUS_ORDER.concat(STATUS_PAUSED);
+const STATUS_CLASS = {
+  'Idea':'idea','Exploration':'exploration','In-Progress':'inprogress','Incubation':'incubation','Scalability':'scalability',
+  'On Hold':'onhold','Stopped':'stopped'
+};
+const STATUS_COLOR = {
+  'Idea':'var(--teal-900)','Exploration':'var(--teal-500)','In-Progress':'var(--green-500)',
+  'Incubation':'var(--green-300)','Scalability':'var(--yellow-400)',
+  'On Hold':'var(--hold)','Stopped':'var(--stopped)'
+};
+const STATUS_DARK_TEXT = {'Incubation':true,'Scalability':true,'On Hold':true};
+function statusTextStyle(status){ return STATUS_DARK_TEXT[status] ? 'color:var(--ink);' : ''; }
+
+function uid(prefix){return prefix+'-'+Math.random().toString(36).slice(2,9);}
+
+const SEED_DATA = {"regions":[{"id":"eur","code":"EUR","name":"Europe","lead":"Fabio Saxer","note":"","projects":[{"id":"p-2o5i1ct","name":"Machine connectivity with ITENS in BZAM","lead":"","status":"In-Progress","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-13phaar","name":"Employee enablement in BZAM, BUZ and BHWL","lead":"","status":"Exploration","notes":"","tasks":[],"archived":false,"hasImage":false}],"log":[]},{"id":"buz","code":"BUZ","name":"BUZ","lead":"Roman Heuberger","note":"","projects":[{"id":"p-e250o10","name":"Evaluation of OEE software and machine connectivity","lead":"Fabio Keller","status":"Exploration","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-2r1b87o","name":"Evaluation of maintenance software","lead":"Fabio Saxer","status":"Exploration","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-uuvm0u3","name":"Druckluft","lead":"","status":"Idea","notes":"Zusammen mit der Uze","tasks":[],"archived":false,"hasImage":false},{"id":"p-2dv61wa","name":"Track and Trace","lead":"","status":"On Hold","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-vjq71dq","name":"Time Study with Fraunhofer","lead":"Pascal Wälli","status":"Idea","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-lsy37e7","name":"Coating Robotic","lead":"","status":"Idea","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-4r21w3h","name":"Lehrlingsausbildung","lead":"","status":"Idea","notes":"Weiterentwicklung (Digitales) Andon\nZustandserfassung der Vorbehandlungsbäder\nDigitale Nachricht bei Türöffnung vom Trockner\nReal Time Maschinenzustand auf dem Shopfloor\n","tasks":[],"archived":false,"hasImage":false}],"log":[]},{"id":"gcr","code":"GCR","name":"Greater China Region","lead":"Yan Chen","note":"","projects":[{"id":"p-q79s59c","name":"Lighthouse","lead":"","status":"Exploration","notes":"Zoomlion or CMCU\nPartner evaluation pending for August\nAGVs\nDigital Twin","tasks":[],"archived":false,"hasImage":false},{"id":"p-tawxqcc","name":"Smart inspection","lead":"","status":"Exploration","notes":"Sheet metal\nAssembly\nelectronic installation","tasks":[],"archived":false,"hasImage":false},{"id":"p-rkezyf9","name":"Agentic AIs","lead":"","status":"Exploration","notes":"routing based on 3D drawing -- cost estemation\nCNC part - 98% accuracy\nAssembly with SOP - accuracy pending","tasks":[],"archived":false,"hasImage":false},{"id":"p-fh79tme","name":"Robotics","lead":"","status":"Exploration","notes":"iSage (integrator), Estun (producer) and many more : )\nShanghai AI institute - potential soultion for BCHA","tasks":[],"archived":false,"hasImage":false},{"id":"p-9zeb37s","name":"SmartMeters","lead":"","status":"Incubation","notes":"","tasks":[],"archived":false,"hasImage":false}],"log":[]},{"id":"mai","code":"MAI","name":"Middle East, Africa, India","lead":"Sudhir Punyamurthula","note":"","projects":[{"id":"p-4xeqg7r","name":"See the Excel Sheet","lead":"","status":"Idea","notes":" ","tasks":[],"archived":false,"hasImage":false}],"log":[]},{"id":"ams","code":"AMS","name":"Americas","lead":"Lucia Manatschal","note":"","projects":[{"id":"p-akelt3z","name":"Machine connectivity with BySoft","lead":"","status":"Stopped","notes":"","tasks":[],"archived":true,"hasImage":false},{"id":"p-qiy8vge","name":"Implementation of ProPlant as maintenance software","lead":"Fabio Saxer","status":"In-Progress","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-53jmswn","name":"Roomz workplace transparency","lead":"","status":"On Hold","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-4r5t6to","name":"Robotics","lead":"","status":"Exploration","notes":"Problems with Firmwareupdate and Docking...\nDreame does not want to help us, since we bought it with an unautorised vendor","tasks":[],"archived":false,"hasImage":false}],"log":[]}],"global":{"lead":"Fabio Saxer","projects":[{"id":"p-eoc5toy","name":"REWO work instructions","lead":"Lucia Manatschal","status":"In-Progress","notes":"","tasks":[],"archived":false,"hasImage":false},{"id":"p-fs4y40p","name":"Digital twin & simulation with SimPlan","lead":"Jris Niedermann","status":"Exploration","notes":"BUZ - Walzenfertigung\n","tasks":[],"archived":false,"hasImage":false},{"id":"p-hqpk4oq","name":"AI support in cost estimation","lead":"","status":"Exploration","notes":"NAM - Collin: simple Promt\nNAM - Ben: Hardcoded Inventor estimation\nNAM - Lucia: AI Training for Welding symbols (Phyton)\nEUR - Karoline: AI Prompt more established and with Bühler Process Data behind.","tasks":[],"archived":false,"hasImage":false}],"log":[]},"prepItems":[{"id":"prep-ux9by6s","text":"Durckerformat","scope":"ams","done":true,"doneIn":[],"created":"2026-07-22"},{"id":"prep-mz7ipj2","text":"Falls Jris dabei: Rückmeldung Fabrizio Simplan","scope":"ams","done":true,"doneIn":[],"created":"2026-07-22"},{"id":"prep-xj7eio8","text":"Lehrlingsausbildung","scope":"buz","done":true,"doneIn":[],"created":"2026-07-22"},{"id":"prep-1sabjti","text":"Rewo newly with BCHA","scope":"gcr","done":true,"doneIn":[],"created":"2026-07-22"},{"id":"prep-859bo4y","text":"https://www.filics.eu/en","scope":"buz","done":false,"doneIn":[],"created":"2026-07-23"},{"id":"prep-j830rz1","text":"Bystronic -> no answer, contact BySoft Suite team directly?","scope":"ams","done":true,"doneIn":[],"created":"2026-07-28"},{"id":"prep-1m74w2y","text":"SPI Circle Folien angepasst","scope":"ams","done":true,"doneIn":[],"created":"2026-07-28"},{"id":"prep-umeyab1","text":"Jour Fixe SimPlan absagen oder nicht?","scope":"ams","done":true,"doneIn":[],"created":"2026-07-28"},{"id":"prep-p6t0xty","text":"End of October will be an learning week - we have 1h to present MLS SPI","scope":"all","done":false,"doneIn":["ams"],"created":"2026-07-28"},{"id":"prep-7lweosc","text":"So that we don't have to talk 1h... do we wanna present some videos?","scope":"all","done":false,"doneIn":["ams"],"created":"2026-07-28"},{"id":"prep-p2n5xln","text":"Jour Fixe SimPlan -- How to prepare -- Infos mit Shashi","scope":"ams","done":true,"doneIn":[],"created":"2026-07-29"},{"id":"prep-h7ktf5h","text":"For BCHA visit: I need about 2h with Dario and Wei He - do we have time or do I need to arrive earlier","scope":"gcr","done":true,"doneIn":[],"created":"2026-07-29"},{"id":"prep-7aupvit","text":"We are not allowed, to present topics, that we are not paying fore (e.g. SmartMeters)","scope":"all","done":false,"doneIn":["mai"],"created":"2026-08-04"},{"id":"prep-jwplbbn","text":"Did you have a Look into Roomz?","scope":"gcr","done":false,"doneIn":[],"created":"2026-08-25"},{"id":"prep-pj3s34b","text":"What was the outcome out of this AI thing from Matthias Gräber?^- AI Space enhancements","scope":"gcr","done":false,"doneIn":[],"created":"2026-08-25"},{"id":"prep-auemxqs","text":"Shopfloor Hardware Diskussion","scope":"ams","done":false,"doneIn":[],"created":"2026-08-27"}]};
+
+function defaultData(){
+  return JSON.parse(JSON.stringify(SEED_DATA));
+}
+
+let DATA = null;
+let currentTab = 'dashboard';
+let exchangeStops = [];
+let exchangeIdx = 0;
+let taskFilter = 'open';
+let prepFilter = 'open';
+let usingLocalFallback = false;
+
+/* ---------------- Storage layer ----------------
+   Primary store is a shared Supabase project (tables spi_data / spi_images),
+   so every visitor reads/writes the same live data. Every write goes
+   through a Postgres RPC function that checks the team passphrase
+   server-side (never stored anywhere readable) — see getTeamPass()/sbWrite().
+   localStorage is kept as an offline cache/fallback only. */
+let teamPass = null;
+function showPassModal(){
+  return new Promise(resolve=>{
+    const old = document.getElementById('passModalOverlay');
+    if(old) old.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'passModalOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,34,41,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:var(--white,#fff);border-radius:14px;padding:24px;max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:'Inter',sans-serif;">
+        <h3 style="margin:0 0 8px;font-size:16px;font-family:'Fraunces',serif;">Team-Passwort</h3>
+        <p style="font-size:13px;color:var(--ink-soft,#4b5c60);margin:0 0 14px;">Zum Speichern von Änderungen wird das gemeinsame Team-Passwort benötigt.</p>
+        <input type="password" id="passModalInput" style="width:100%;border:1px solid var(--line,#e2e3d9);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+          <button type="button" id="passModalCancel" style="border:none;background:var(--paper-dim,#f2f1ea);color:var(--ink-soft,#4b5c60);padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;">Abbrechen</button>
+          <button type="button" id="passModalOk" style="border:none;background:var(--teal-900,#0b3948);color:#fff;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;">Bestätigen</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = document.getElementById('passModalInput');
+    input.focus();
+    function finish(val){ overlay.remove(); resolve(val); }
+    document.getElementById('passModalOk').addEventListener('click', ()=>finish(input.value.trim()));
+    document.getElementById('passModalCancel').addEventListener('click', ()=>finish(''));
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') finish(input.value.trim()); });
+  });
+}
+async function getTeamPass(){
+  if(teamPass) return teamPass;
+  try{ teamPass = localStorage.getItem('spi_teampass') || ''; }catch(e){}
+  if(!teamPass){
+    teamPass = await showPassModal();
+    if(teamPass){ try{ localStorage.setItem('spi_teampass', teamPass); }catch(e){} }
+  }
+  return teamPass;
+}
+function clearTeamPass(){
+  teamPass = null;
+  try{ localStorage.removeItem('spi_teampass'); }catch(e){}
+}
+async function sbWrite(fn, params){
+  if(!sb) return false;
+  const pass = await getTeamPass();
+  if(!pass) return false;
+  try{
+    const { error } = await sb.rpc(fn, Object.assign({}, params, {passphrase: pass}));
+    if(error) throw error;
+    return true;
+  }catch(e){
+    console.error('Supabase write failed', e);
+    if(String(e && e.message || '').toLowerCase().includes('passphrase')){
+      alert('Falsches Team-Passwort — Änderung wurde nicht gespeichert. Bitte neu eingeben.');
+      clearTeamPass();
+    }
+    return false;
+  }
+}
+async function storageSet(key, value){
+  let ok = false;
+  try{ localStorage.setItem('spi_'+key, value); ok = true; }
+  catch(e){ console.error('localStorage write failed', e); }
+  if(key === 'spi-tracker-data'){
+    if(await sbWrite('save_spi_data', {new_data: value})) ok = true; else usingLocalFallback = true;
+  } else if(key.indexOf('img:')===0){
+    const projId = key.slice(4);
+    if(await sbWrite('save_spi_image', {p_project_id: projId, p_data_url: value})) ok = true; else usingLocalFallback = true;
+  }
+  return ok;
+}
+async function storageGet(key){
+  if(key === 'spi-tracker-data' && sb){
+    try{
+      const { data, error } = await sb.from('spi_data').select('data').eq('id', 1).single();
+      if(error) throw error;
+      if(data && data.data){ localStorage.setItem('spi_'+key, data.data); return data.data; }
+    }catch(e){ console.error('Supabase read failed', e); usingLocalFallback = true; }
+  } else if(key.indexOf('img:')===0 && sb){
+    const projId = key.slice(4);
+    try{
+      const { data, error } = await sb.from('spi_images').select('data_url').eq('project_id', projId).maybeSingle();
+      if(error) throw error;
+      if(data && data.data_url) return data.data_url;
+    }catch(e){ console.error('Supabase image read failed', e); }
+  }
+  try{ return localStorage.getItem('spi_'+key); }
+  catch(e){ return null; }
+}
+async function storageDelete(key){
+  try{ localStorage.removeItem('spi_'+key); }catch(e){}
+  if(key.indexOf('img:')===0){
+    const projId = key.slice(4);
+    await sbWrite('delete_spi_image', {p_project_id: projId});
+  }
+}
+function attachRealtimeSync(){
+  if(!sb) return;
+  sb.channel('spi_data_changes')
+    .on('postgres_changes', {event:'UPDATE', schema:'public', table:'spi_data', filter:'id=eq.1'}, payload=>{
+      const val = payload.new && payload.new.data;
+      if(!val || val === JSON.stringify(DATA)) return;
+      try{
+        DATA = JSON.parse(val);
+        normalizeData();
+        try{ localStorage.setItem('spi_spi-tracker-data', val); }catch(e){}
+        renderTab();
+      }catch(e){ console.error('bad realtime payload', e); }
+    })
+    .subscribe();
+}
+
+async function loadData(){
+  try{
+    const val = await storageGet('spi-tracker-data');
+    if(val){ DATA = JSON.parse(val); normalizeData(); updateStorageNotice(); return; }
+  }catch(e){ /* not found / corrupt */ }
+  DATA = defaultData();
+  await saveData();
+  updateStorageNotice();
+}
+function normalizeData(){
+  const fixProjects = (arr)=>{
+    (arr||[]).forEach(p=>{
+      if(typeof p.archived!=='boolean') p.archived = false;
+      if(typeof p.hasImage!=='boolean') p.hasImage = false;
+      if(!p.tasks) p.tasks = [];
+      if(typeof p.notes!=='string') p.notes = '';
+      if(typeof p.lead!=='string') p.lead = '';
+    });
+  };
+  const fixLog = (arr)=>{ (arr||[]).forEach(l=>{ if(!l.id) l.id = uid('log'); }); };
+  DATA.regions.forEach(r=>{ fixProjects(r.projects); fixLog(r.log); });
+  fixProjects(DATA.global.projects); fixLog(DATA.global.log);
+  if(!DATA.prepItems) DATA.prepItems = [];
+  DATA.prepItems.forEach(i=>{
+    if(i.scope==='all'){
+      if(!Array.isArray(i.doneIn)) i.doneIn = i.done ? PREP_STOPS.slice() : [];
+    } else {
+      if(typeof i.done!=='boolean') i.done = false;
+    }
+  });
+}
+async function saveData(){
+  showSaveStatus('saving');
+  await storageSet('spi-tracker-data', JSON.stringify(DATA));
+  if(document.getElementById('heroStats')) renderHeroStats();
+  updateStorageNotice();
+  showSaveStatus('saved');
+}
+function updateStorageNotice(){
+  const el = document.getElementById('storageNotice');
+  if(!el) return;
+  el.textContent = usingLocalFallback
+    ? 'Offline — saved only on this device'
+    : 'Saved to shared team database';
+}
+function showSaveStatus(state){
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  clearTimeout(showSaveStatus._t);
+  if(state==='saving'){
+    el.textContent = 'Saving…';
+  } else {
+    el.textContent = 'Saved ✓';
+    showSaveStatus._t = setTimeout(()=>{ el.textContent=''; }, 1600);
+  }
+}
+
+function allProjectsFlat(){
+  const out = [];
+  DATA.regions.forEach(r=>r.projects.forEach(p=>out.push({region:r.code, regionName:r.name, project:p})));
+  DATA.global.projects.forEach(p=>out.push({region:'GLOBAL', regionName:'Global', project:p}));
+  return out;
+}
+function activeOnly(projects){ return projects.filter(p=>!p.archived); }
+function archivedOnly(projects){ return projects.filter(p=>p.archived); }
+
+const PREP_SCOPES = ['all','eur','buz','gcr','mai','ams','global'];
+const PREP_STOPS = ['eur','buz','gcr','mai','ams','global'];
+function scopeLabel(scope){
+  if(scope==='all') return 'All regions';
+  if(scope==='global') return 'Global';
+  const r = DATA.regions.find(x=>x.id===scope);
+  return r ? r.code : scope;
+}
+function scopeOptionsHtml(selected){
+  return PREP_SCOPES.map(s=>`<option value="${s}" ${s===selected?'selected':''}>${scopeLabel(s)}</option>`).join('');
+}
+function stopLabel(stopId){
+  if(stopId==='global') return 'GLOBAL';
+  const r = DATA.regions.find(x=>x.id===stopId);
+  return r ? r.code : stopId;
+}
+function isPrepFullyDone(item){
+  if(item.scope==='all') return (item.doneIn||[]).length >= PREP_STOPS.length;
+  return !!item.done;
+}
+function isPrepDoneForStop(item, stopId){
+  if(item.scope==='all') return (item.doneIn||[]).includes(stopId);
+  return !!item.done;
+}
+
+function renderHeroStats(){
+  const flat = allProjectsFlat().filter(x=>!x.project.archived);
+  const beyondIdea = flat.filter(x=>x.project.status!=='Idea').length;
+  document.getElementById('heroStats').innerHTML = `
+    <div class="hero-stat"><b>${DATA.regions.length}</b>regions</div>
+    <div class="hero-stat"><b>${flat.length}</b>active projects</div>
+    <div class="hero-stat"><b>${beyondIdea}</b>beyond idea stage</div>
+  `;
+}
+
+function statusBar(projects){
+  if(!projects.length) return '<div class="statusbar"></div>';
+  const counts = {}; STATUS_ALL.forEach(s=>counts[s]=0);
+  projects.forEach(p=>counts[p.status]=(counts[p.status]||0)+1);
+  const total = projects.length;
+  return '<div class="statusbar">'+STATUS_ALL.map(s=>{
+    const w = (counts[s]/total*100).toFixed(1);
+    if(counts[s]===0) return '';
+    return `<div style="width:${w}%;background:${STATUS_COLOR[s]}" title="${s}: ${counts[s]}"></div>`;
+  }).join('')+'</div>';
+}
+
+function legendHtml(){
+  return `<div class="legend">
+    <span class="lbl-idea">Idea</span>
+    <span class="lbl-exploration">Exploration</span>
+    <span class="lbl-inprogress">In-Progress</span>
+    <span class="lbl-incubation">Incubation</span>
+    <span class="lbl-scalability">Scalability</span>
+  </div>
+  <div class="legend-paused">
+    <span class="tag">Paused, outside the stage flow:</span>
+    <span class="pill lbl-onhold">On Hold</span>
+    <span class="pill lbl-stopped">Stopped</span>
+  </div>`;
+}
+
+/* ---------------- Dashboard ---------------- */
+function renderDashboard(){
+  let html = legendHtml();
+  html += `<div class="section-title"><h2>Regions</h2><span>tap a card to open Exchange Mode</span></div>`;
+  html += '<div class="grid">';
+  DATA.regions.forEach(r=>{
+    const active = activeOnly(r.projects);
+    html += `<div class="rcard" data-region="${r.id}">
+      <div class="rcard-top"><span class="rcode">${r.code}</span><span class="count">${active.length} project${active.length!==1?'s':''}</span></div>
+      <h3>${r.name.split('(')[0].trim()}</h3>
+      <div class="lead">${r.lead}</div>
+      ${statusBar(active)}
+    </div>`;
+  });
+  html += '</div>';
+
+  const gActive = activeOnly(DATA.global.projects);
+  html += `<div class="section-title"><h2>Global Coordinated Projects</h2><span>${DATA.global.lead}</span></div>`;
+  html += `<div class="rcard" style="cursor:pointer;max-width:100%;" data-region="global">
+      <div class="rcard-top"><span class="rcode" style="background:var(--yellow-400);color:var(--ink);">GLOBAL</span><span class="count">${gActive.length} project${gActive.length!==1?'s':''}</span></div>
+      ${statusBar(gActive)}
+    </div>`;
+
+  document.getElementById('container').innerHTML = html;
+  document.querySelectorAll('.rcard[data-region]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const rid = el.getAttribute('data-region');
+      currentTab='exchange';
+      setActiveNav('exchange');
+      exchangeIdx = exchangeStops.indexOf(rid);
+      if(exchangeIdx<0) exchangeIdx=0;
+      renderTab();
+    });
+  });
+}
+
+/* ---------------- Exchange Mode ---------------- */
+function getStopData(stopId){
+  if(stopId==='global') return {id:'global', code:'GLOBAL', name:'Global Coordinated Projects', lead:DATA.global.lead, projects:DATA.global.projects, log:DATA.global.log, isGlobal:true};
+  const r = DATA.regions.find(x=>x.id===stopId);
+  return {...r, isGlobal:false};
+}
+
+function projectCardHtml(p, ownerKey, opts){
+  opts = opts || {};
+  const readOnly = !!opts.readOnly;
+  const statusOptions = '<optgroup label="Stage">'+STATUS_ORDER.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')+'</optgroup>'
+    + '<optgroup label="Paused">'+STATUS_PAUSED.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')+'</optgroup>';
+  const tasksHtml = (p.tasks||[]).map(t=>`
+    <div class="task-row ${t.done?'done':''}" data-task="${t.id}">
+      <input type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-owner="${ownerKey}" data-project="${p.id}" data-task-id="${t.id}">
+      <span class="txt">${escapeHtml(t.text)}</span>
+      <button class="del" data-action="del-task" data-owner="${ownerKey}" data-project="${p.id}" data-task-id="${t.id}">&times;</button>
+    </div>`).join('');
+
+  if(readOnly){
+    return `<div class="pcard is-archived" data-project="${p.id}">
+      <div class="pcard-top">
+        <div class="pcard-fields">
+          <div style="font-weight:600;font-size:14.5px;">${escapeHtml(p.name)}</div>
+          ${p.lead?`<div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${escapeHtml(p.lead)}</div>`:''}
+        </div>
+        <span class="snap-badge" style="background:${STATUS_COLOR[p.status]};${statusTextStyle(p.status)}">${p.status}</span>
+      </div>
+      ${p.hasImage?`<div class="pcard-image-wrap" data-project-image="${p.id}"><div class="img-loading">Loading photo…</div></div>`:''}
+      <div class="pcard-actions">
+        <button data-action="restore-project" data-owner="${ownerKey}" data-project="${p.id}">Restore</button>
+        <button class="danger" data-action="delete-project" data-owner="${ownerKey}" data-project="${p.id}">Delete permanently</button>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="pcard" data-project="${p.id}">
+    <div class="pcard-top">
+      <div class="pcard-fields">
+        <input type="text" class="pcard-name-input" value="${escapeHtml(p.name)}" placeholder="Project name" data-action="set-name" data-owner="${ownerKey}" data-project="${p.id}">
+        <input type="text" class="pcard-lead-input" value="${escapeHtml(p.lead||'')}" placeholder="Name (optional)" data-action="set-lead" data-owner="${ownerKey}" data-project="${p.id}">
+      </div>
+      <select class="status-select st-${STATUS_CLASS[p.status]}" data-action="set-status" data-owner="${ownerKey}" data-project="${p.id}">${statusOptions}</select>
+    </div>
+    <textarea placeholder="Notes from the exchange..." data-action="set-notes" data-owner="${ownerKey}" data-project="${p.id}">${escapeHtml(p.notes||'')}</textarea>
+    ${p.hasImage?`<div class="pcard-image-wrap" data-project-image="${p.id}"><div class="img-loading">Loading photo…</div></div>`:''}
+    <div class="photo-row">
+      <label class="photo-label">${p.hasImage?'Replace photo':'+ Add photo'}<input type="file" accept="image/*" data-action="upload-image" data-owner="${ownerKey}" data-project="${p.id}"></label>
+      ${p.hasImage?`<button class="remove-photo" data-action="remove-image" data-owner="${ownerKey}" data-project="${p.id}">Remove photo</button>`:''}
+    </div>
+    <div class="tasklist">${tasksHtml}</div>
+    <div class="addtask">
+      <input type="text" placeholder="Add a follow-up task..." data-owner="${ownerKey}" data-project="${p.id}" class="new-task-input">
+      <button data-action="add-task" data-owner="${ownerKey}" data-project="${p.id}">Add</button>
+    </div>
+    <div class="pcard-actions">
+      <button data-action="archive-project" data-owner="${ownerKey}" data-project="${p.id}">Archive / complete</button>
+      <button class="danger" data-action="delete-project" data-owner="${ownerKey}" data-project="${p.id}">Delete</button>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fileToCompressedDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 1000;
+        let w = img.width, h = img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){ h = Math.round(h*maxDim/w); w = maxDim; } else { w = Math.round(w*maxDim/h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.72));
+      };
+      img.onerror = ()=>reject(new Error('Could not read image'));
+      img.src = reader.result;
+    };
+    reader.onerror = ()=>reject(new Error('Could not read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveProjectImage(projectId, dataUrl){
+  try{ await storageSet('img:'+projectId, dataUrl); return true; }
+  catch(e){ console.error('image save failed', e); return false; }
+}
+async function loadProjectImage(projectId){
+  try{ return await storageGet('img:'+projectId); }
+  catch(e){ return null; }
+}
+async function deleteProjectImage(projectId){
+  try{ await storageDelete('img:'+projectId); }
+  catch(e){ /* ignore */ }
+}
+
+function openLightbox(src){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,34,41,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:28px;';
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);';
+  overlay.appendChild(img);
+  overlay.addEventListener('click', ()=>overlay.remove());
+  document.body.appendChild(overlay);
+}
+
+async function loadCardImages(){
+  const slots = document.querySelectorAll('[data-project-image]');
+  for(const slot of slots){
+    const pid = slot.getAttribute('data-project-image');
+    const dataUrl = await loadProjectImage(pid);
+    if(dataUrl){
+      slot.innerHTML = `<img class="pcard-image" src="${dataUrl}" alt="Project photo">`;
+      slot.querySelector('img').addEventListener('click', ()=>openLightbox(dataUrl));
+    } else {
+      slot.innerHTML = '';
+    }
+  }
+}
+
+function renderExchange(){
+  exchangeStops = ['eur','buz','gcr','mai','ams','global'];
+  const stopId = exchangeStops[exchangeIdx];
+  const stop = getStopData(stopId);
+
+  let html = `<div class="stops">`;
+  exchangeStops.forEach((sid,i)=>{
+    const label = sid==='global' ? 'GLOBAL' : DATA.regions.find(r=>r.id===sid).code;
+    html += `<div class="stop-pill ${i===exchangeIdx?'active':''}" data-idx="${i}">${label}</div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="exchange-head">
+    <div>
+      <h2>${stop.isGlobal ? 'Global Coordinated Projects' : stop.name}</h2>
+      <div class="lead-tag">${stop.lead}</div>
+    </div>
+    <div class="nav-arrows">
+      <button class="arrow-btn" id="prevStop" ${exchangeIdx===0?'disabled':''}>&larr; Previous</button>
+      <button class="arrow-btn" id="nextStop" ${exchangeIdx===exchangeStops.length-1?'disabled':''}>Next &rarr;</button>
+    </div>
+  </div>`;
+
+  const relevantPrep = DATA.prepItems.filter(i=>!isPrepDoneForStop(i, stopId) && (i.scope==='all' || i.scope===stopId));
+  html += `<div class="panel"><h4>Prep — things to raise</h4>`;
+  if(relevantPrep.length){
+    relevantPrep.forEach(i=>{
+      const progress = i.scope==='all' ? ` <span class="mono" style="font-size:10px;color:var(--ink-soft);">(all regions — ${(i.doneIn||[]).length}/${PREP_STOPS.length} addressed)</span>` : '';
+      html += `<div class="prep-row" data-prep="${i.id}">
+        <input type="checkbox" data-action="check-prep" data-prep="${i.id}">
+        <span style="flex:1;">${escapeHtml(i.text)}${progress}</span>
+      </div>`;
+    });
+  } else {
+    html += `<div class="empty" style="padding:10px 0;">Nothing prepared for this stop yet.</div>`;
+  }
+  html += `<div class="exchange-prep-add">
+    <input type="text" id="quickPrepText" placeholder="Add something to raise...">
+    <label><input type="checkbox" id="quickPrepAll"> applies to all regions</label>
+    <button id="quickPrepAdd">Add</button>
+  </div></div>`;
+
+  const activeProjects = activeOnly(stop.projects);
+  const archived = archivedOnly(stop.projects);
+
+  html += `<div class="panel"><h4>${stop.isGlobal ? 'Global Projects' : "This region's projects"}</h4>`;
+  html += activeProjects.length ? activeProjects.map(p=>projectCardHtml(p, stopId)).join('') : `<div class="empty" style="padding:20px 0;">No active projects yet — add the first one below.</div>`;
+  html += `<button class="add-project-toggle" id="addProjectToggle">+ Add a project</button>
+    <div class="add-project-form" id="addProjectForm" style="display:none;">
+      <input type="text" id="newProjectName" placeholder="Project name">
+      <input type="text" id="newProjectLead" placeholder="Name (optional)" style="max-width:160px;">
+      <button id="newProjectSave">Add project</button>
+    </div>`;
+  if(archived.length){
+    html += `<button class="archived-toggle" id="archivedToggle">Show archived / completed (${archived.length})</button>
+      <div class="archived-list" id="archivedList" style="display:none;">
+        ${archived.map(p=>projectCardHtml(p, stopId, {readOnly:true})).join('')}
+      </div>`;
+  }
+  html += `</div>`;
+
+  if(!stop.isGlobal){
+    html += `<div class="panel"><h4>Snapshot — what's happening in other regions</h4>`;
+    DATA.regions.filter(r=>r.id!==stopId).forEach(r=>{
+      const rActive = activeOnly(r.projects);
+      if(!rActive.length) return;
+      html += `<div class="snap-region"><div class="snap-region-name">${r.code} — ${r.lead}</div>`;
+      rActive.forEach(p=>{
+        html += `<div class="snap-row"><span>${escapeHtml(p.name)}</span><span class="snap-badge" style="background:${STATUS_COLOR[p.status]};${statusTextStyle(p.status)}">${p.status}</span></div>`;
+      });
+      html += `</div>`;
+    });
+    const gActive = activeOnly(DATA.global.projects);
+    if(gActive.length){
+      html += `<div class="snap-region"><div class="snap-region-name">GLOBAL — ${DATA.global.lead}</div>`;
+      gActive.forEach(p=>{
+        html += `<div class="snap-row"><span>${escapeHtml(p.name)}</span><span class="snap-badge" style="background:${STATUS_COLOR[p.status]};${statusTextStyle(p.status)}">${p.status}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="panel sessionbox"><h4>Session note</h4>
+    <textarea id="sessionNoteInput" placeholder="Anything worth remembering from this exchange..."></textarea>
+    <button id="saveSessionNote">Save note</button>
+    <div id="logEntries">`;
+  (stop.log||[]).slice().reverse().forEach(l=>{
+    html += `<div class="log-entry" data-log="${l.id}">
+      <div class="log-entry-head">
+        <div class="log-date">${l.date}</div>
+        <div class="log-actions">
+          <button data-action="edit-log" data-log="${l.id}">Edit</button>
+          <button class="danger" data-action="delete-log" data-log="${l.id}">Delete</button>
+        </div>
+      </div>
+      <div class="log-text">${escapeHtml(l.text)}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  document.getElementById('container').innerHTML = html;
+  attachExchangeEvents(stopId, stop.isGlobal);
+  loadCardImages();
+}
+
+function attachExchangeEvents(stopId, isGlobal){
+  document.querySelectorAll('.stop-pill').forEach(el=>{
+    el.addEventListener('click', ()=>{ exchangeIdx = parseInt(el.getAttribute('data-idx')); renderExchange(); });
+  });
+  const prev = document.getElementById('prevStop');
+  const next = document.getElementById('nextStop');
+  if(prev) prev.addEventListener('click', ()=>{ if(exchangeIdx>0){exchangeIdx--; renderExchange();} });
+  if(next) next.addEventListener('click', ()=>{ if(exchangeIdx<exchangeStops.length-1){exchangeIdx++; renderExchange();} });
+
+  function findProjectArr(ownerKey){
+    if(ownerKey==='global') return DATA.global.projects;
+    return DATA.regions.find(r=>r.id===ownerKey).projects;
+  }
+
+  document.querySelectorAll('[data-action="set-status"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.status = el.value;
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="set-notes"]').forEach(el=>{
+    el.addEventListener('blur', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.notes = el.value;
+      await saveData();
+    });
+  });
+
+  document.querySelectorAll('[data-action="set-name"]').forEach(el=>{
+    el.addEventListener('blur', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      const val = el.value.trim();
+      if(val) p.name = val; else el.value = p.name;
+      await saveData();
+    });
+  });
+
+  document.querySelectorAll('[data-action="set-lead"]').forEach(el=>{
+    el.addEventListener('blur', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.lead = el.value.trim();
+      await saveData();
+    });
+  });
+
+  document.querySelectorAll('[data-action="archive-project"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.archived = true;
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="restore-project"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.archived = false;
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-project"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(!confirm('Delete this project permanently? This cannot be undone.')) return;
+      const owner = el.getAttribute('data-owner');
+      const projId = el.getAttribute('data-project');
+      await deleteProjectImage(projId);
+      if(owner==='global'){ DATA.global.projects = DATA.global.projects.filter(x=>x.id!==projId); }
+      else { const r = DATA.regions.find(x=>x.id===owner); r.projects = r.projects.filter(x=>x.id!==projId); }
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="upload-image"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const file = el.files && el.files[0];
+      if(!file) return;
+      const owner = el.getAttribute('data-owner');
+      const projId = el.getAttribute('data-project');
+      const label = el.closest('.photo-label');
+      const originalText = label.childNodes[0].textContent;
+      label.childNodes[0].textContent = 'Uploading...';
+      try{
+        const dataUrl = await fileToCompressedDataUrl(file);
+        const ok = await saveProjectImage(projId, dataUrl);
+        if(ok){
+          const arr = findProjectArr(owner);
+          const p = arr.find(x=>x.id===projId);
+          p.hasImage = true;
+          await saveData();
+          renderExchange();
+        } else {
+          alert('Could not save the photo. Please try a smaller image.');
+          label.childNodes[0].textContent = originalText;
+        }
+      }catch(e){
+        alert('Could not read that image file.');
+        label.childNodes[0].textContent = originalText;
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="remove-image"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(!confirm('Remove this photo?')) return;
+      const owner = el.getAttribute('data-owner');
+      const projId = el.getAttribute('data-project');
+      await deleteProjectImage(projId);
+      const arr = findProjectArr(owner);
+      const p = arr.find(x=>x.id===projId);
+      p.hasImage = false;
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  const addToggle = document.getElementById('addProjectToggle');
+  const addForm = document.getElementById('addProjectForm');
+  if(addToggle){
+    addToggle.addEventListener('click', ()=>{
+      addForm.style.display = addForm.style.display==='none' ? 'flex' : 'none';
+      if(addForm.style.display==='flex') document.getElementById('newProjectName').focus();
+    });
+  }
+  const newProjectSave = document.getElementById('newProjectSave');
+  if(newProjectSave){
+    newProjectSave.addEventListener('click', async ()=>{
+      const nameInput = document.getElementById('newProjectName');
+      const leadInput = document.getElementById('newProjectLead');
+      const name = nameInput.value.trim();
+      if(!name) { nameInput.focus(); return; }
+      const newP = {id:uid('p'), name, lead:leadInput.value.trim(), status:'Idea', notes:'', tasks:[], archived:false, hasImage:false};
+      const arr = findProjectArr(stopId);
+      arr.push(newP);
+      await saveData();
+      renderExchange();
+    });
+  }
+
+  const archivedToggle = document.getElementById('archivedToggle');
+  if(archivedToggle){
+    archivedToggle.addEventListener('click', ()=>{
+      const list = document.getElementById('archivedList');
+      list.style.display = list.style.display==='none' ? 'block' : 'none';
+    });
+  }
+
+  document.querySelectorAll('[data-action="check-prep"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const item = DATA.prepItems.find(i=>i.id===el.getAttribute('data-prep'));
+      if(!el.checked) return; // items only appear here while open; checking marks this stop as addressed
+      if(item.scope==='all'){
+        item.doneIn = item.doneIn || [];
+        if(!item.doneIn.includes(stopId)) item.doneIn.push(stopId);
+      } else {
+        item.done = true;
+      }
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  const quickPrepAdd = document.getElementById('quickPrepAdd');
+  if(quickPrepAdd){
+    quickPrepAdd.addEventListener('click', async ()=>{
+      const input = document.getElementById('quickPrepText');
+      const allChecked = document.getElementById('quickPrepAll').checked;
+      const text = input.value.trim();
+      if(!text) { input.focus(); return; }
+      const scope = allChecked ? 'all' : stopId;
+      DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10)});
+      await saveData();
+      renderExchange();
+    });
+  }
+
+  document.querySelectorAll('[data-action="add-task"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const owner = el.getAttribute('data-owner');
+      const projId = el.getAttribute('data-project');
+      const input = document.querySelector(`.new-task-input[data-owner="${owner}"][data-project="${projId}"]`);
+      const text = input.value.trim();
+      if(!text) return;
+      const arr = findProjectArr(owner);
+      const p = arr.find(x=>x.id===projId);
+      p.tasks = p.tasks || [];
+      p.tasks.push({id:uid('t'), text, done:false, date:new Date().toISOString().slice(0,10)});
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="toggle-task"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      const t = p.tasks.find(x=>x.id===el.getAttribute('data-task-id'));
+      t.done = el.checked;
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="del-task"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const arr = findProjectArr(el.getAttribute('data-owner'));
+      const p = arr.find(x=>x.id===el.getAttribute('data-project'));
+      p.tasks = p.tasks.filter(x=>x.id!==el.getAttribute('data-task-id'));
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  const saveNoteBtn = document.getElementById('saveSessionNote');
+  if(saveNoteBtn){
+    saveNoteBtn.addEventListener('click', async ()=>{
+      const input = document.getElementById('sessionNoteInput');
+      const text = input.value.trim();
+      if(!text) return;
+      const entry = {id:uid('log'), date:new Date().toISOString().slice(0,10), text};
+      if(isGlobal){ DATA.global.log = DATA.global.log||[]; DATA.global.log.push(entry); }
+      else { const r = DATA.regions.find(x=>x.id===stopId); r.log = r.log||[]; r.log.push(entry); }
+      await saveData();
+      renderExchange();
+    });
+  }
+
+  function findLogArr(){ return isGlobal ? DATA.global.log : DATA.regions.find(x=>x.id===stopId).log; }
+
+  document.querySelectorAll('[data-action="delete-log"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(!confirm('Delete this session note?')) return;
+      const arr = findLogArr();
+      const idx = arr.findIndex(x=>x.id===el.getAttribute('data-log'));
+      if(idx>-1) arr.splice(idx,1);
+      await saveData();
+      renderExchange();
+    });
+  });
+
+  document.querySelectorAll('[data-action="edit-log"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const entryEl = document.querySelector(`.log-entry[data-log="${el.getAttribute('data-log')}"]`);
+      const arr = findLogArr();
+      const entry = arr.find(x=>x.id===el.getAttribute('data-log'));
+      const textEl = entryEl.querySelector('.log-text');
+      textEl.outerHTML = `<div class="log-edit-box">
+        <textarea class="log-edit-input">${escapeHtml(entry.text)}</textarea>
+        <div class="row">
+          <button class="save-btn" data-action="save-log-edit" data-log="${entry.id}">Save</button>
+          <button class="cancel-btn" data-action="cancel-log-edit" data-log="${entry.id}">Cancel</button>
+        </div>
+      </div>`;
+      attachLogEditButtons();
+    });
+  });
+
+  function attachLogEditButtons(){
+    document.querySelectorAll('[data-action="save-log-edit"]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const entryEl = btn.closest('.log-entry');
+        const textarea = entryEl.querySelector('.log-edit-input');
+        const newText = textarea.value.trim();
+        if(!newText) return;
+        const arr = findLogArr();
+        const entry = arr.find(x=>x.id===btn.getAttribute('data-log'));
+        entry.text = newText;
+        await saveData();
+        renderExchange();
+      });
+    });
+    document.querySelectorAll('[data-action="cancel-log-edit"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ renderExchange(); });
+    });
+  }
+}
+
+/* ---------------- Prep ---------------- */
+function renderPrep(){
+  let html = `<div class="section-title"><h2>Meeting Prep</h2><span>things to bring up in your next exchanges</span></div>`;
+  html += `<div class="prep-add-form">
+    <input type="text" id="prepNewText" placeholder="Something to raise...">
+    <select id="prepNewScope">${scopeOptionsHtml('all')}</select>
+    <button id="prepAddBtn">Add</button>
+  </div>`;
+
+  html += `<div class="filterbar">
+    <button data-pf="open" class="${prepFilter==='open'?'active':''}">Open</button>
+    <button data-pf="done" class="${prepFilter==='done'?'active':''}">Done</button>
+    <button data-pf="all" class="${prepFilter==='all'?'active':''}">All</button>
+  </div>`;
+
+  let any = false;
+  PREP_SCOPES.forEach(scope=>{
+    let items = DATA.prepItems.filter(i=>i.scope===scope);
+    if(prepFilter==='open') items = items.filter(i=>!isPrepFullyDone(i));
+    if(prepFilter==='done') items = items.filter(i=>isPrepFullyDone(i));
+    if(!items.length) return;
+    any = true;
+    html += `<div class="prep-group"><h4>${scopeLabel(scope)}</h4>`;
+    items.forEach(i=>{
+      if(i.scope==='all'){
+        const doneIn = i.doneIn||[];
+        html += `<div class="prep-row-all" data-prep="${i.id}">
+          <div class="prep-row" style="border-bottom:none;">
+            <input type="text" class="prep-text-input" value="${escapeHtml(i.text)}" data-action="edit-prep" data-prep="${i.id}">
+            <button class="del" data-action="delete-prep" data-prep="${i.id}">&times;</button>
+          </div>
+          <div class="prep-region-grid">
+            ${PREP_STOPS.map(sid=>`<label class="prep-region-chip ${doneIn.includes(sid)?'checked':''}">
+              <input type="checkbox" ${doneIn.includes(sid)?'checked':''} data-action="toggle-prep-region" data-prep="${i.id}" data-stop="${sid}">
+              ${stopLabel(sid)}
+            </label>`).join('')}
+          </div>
+        </div>`;
+      } else {
+        html += `<div class="prep-row ${i.done?'done':''}" data-prep="${i.id}">
+          <input type="checkbox" ${i.done?'checked':''} data-action="toggle-prep" data-prep="${i.id}">
+          <input type="text" class="prep-text-input" value="${escapeHtml(i.text)}" data-action="edit-prep" data-prep="${i.id}">
+          <button class="del" data-action="delete-prep" data-prep="${i.id}">&times;</button>
+        </div>`;
+      }
+    });
+    html += `</div>`;
+  });
+  if(!any){
+    html += `<div class="empty">No ${prepFilter==='all'?'':prepFilter+' '}prep notes yet — add what you want to raise above.</div>`;
+  }
+
+  document.getElementById('container').innerHTML = html;
+
+  document.querySelectorAll('.filterbar button[data-pf]').forEach(el=>{
+    el.addEventListener('click', ()=>{ prepFilter = el.getAttribute('data-pf'); renderPrep(); });
+  });
+
+  document.getElementById('prepAddBtn').addEventListener('click', async ()=>{
+    const input = document.getElementById('prepNewText');
+    const scope = document.getElementById('prepNewScope').value;
+    const text = input.value.trim();
+    if(!text) { input.focus(); return; }
+    DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10)});
+    await saveData();
+    renderPrep();
+  });
+
+  document.querySelectorAll('[data-action="toggle-prep"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const item = DATA.prepItems.find(i=>i.id===el.getAttribute('data-prep'));
+      item.done = el.checked;
+      await saveData();
+      renderPrep();
+    });
+  });
+
+  document.querySelectorAll('[data-action="toggle-prep-region"]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const item = DATA.prepItems.find(i=>i.id===el.getAttribute('data-prep'));
+      const sid = el.getAttribute('data-stop');
+      item.doneIn = item.doneIn || [];
+      if(el.checked){ if(!item.doneIn.includes(sid)) item.doneIn.push(sid); }
+      else { item.doneIn = item.doneIn.filter(x=>x!==sid); }
+      await saveData();
+      renderPrep();
+    });
+  });
+
+  document.querySelectorAll('[data-action="edit-prep"]').forEach(el=>{
+    el.addEventListener('blur', async ()=>{
+      const item = DATA.prepItems.find(i=>i.id===el.getAttribute('data-prep'));
+      const val = el.value.trim();
+      if(val) item.text = val; else el.value = item.text;
+      await saveData();
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-prep"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      DATA.prepItems = DATA.prepItems.filter(i=>i.id!==el.getAttribute('data-prep'));
+      await saveData();
+      renderPrep();
+    });
+  });
+}
+
+/* ---------------- Tasks tab ---------------- */
+function renderTasks(){
+  let html = `<div class="filterbar">
+    <button data-f="open" class="${taskFilter==='open'?'active':''}">Open</button>
+    <button data-f="done" class="${taskFilter==='done'?'active':''}">Done</button>
+    <button data-f="all" class="${taskFilter==='all'?'active':''}">All</button>
+  </div>`;
+
+  const groups = [];
+  DATA.regions.forEach(r=>groups.push({label:r.code+' — '+r.name.split('(')[0].trim(), projects:r.projects}));
+  groups.push({label:'GLOBAL — Global Coordinated Projects', projects:DATA.global.projects});
+
+  let any = false;
+  groups.forEach(g=>{
+    let groupHtml = '';
+    activeOnly(g.projects).forEach(p=>{
+      let tasks = p.tasks||[];
+      if(taskFilter==='open') tasks = tasks.filter(t=>!t.done);
+      if(taskFilter==='done') tasks = tasks.filter(t=>t.done);
+      if(!tasks.length) return;
+      groupHtml += `<div class="tg-project">${escapeHtml(p.name)}</div>`;
+      tasks.forEach(t=>{
+        any = true;
+        groupHtml += `<div class="task-row ${t.done?'done':''}">
+          <input type="checkbox" ${t.done?'checked':''} data-tt-project="${p.id}" data-tt-task="${t.id}">
+          <span class="txt">${escapeHtml(t.text)}</span>
+          <span class="mono" style="font-size:11px;color:var(--ink-soft);margin-left:6px;">${t.date}</span>
+        </div>`;
+      });
+    });
+    if(groupHtml){
+      html += `<div class="taskgroup"><h4>${g.label}</h4>${groupHtml}</div>`;
+    }
+  });
+
+  if(!any){
+    html += `<div class="empty">No ${taskFilter==='all'?'':taskFilter+' '}follow-up tasks yet.</div>`;
+  }
+
+  document.getElementById('container').innerHTML = html;
+
+  document.querySelectorAll('.filterbar button').forEach(el=>{
+    el.addEventListener('click', ()=>{ taskFilter = el.getAttribute('data-f'); renderTasks(); });
+  });
+
+  document.querySelectorAll('[data-tt-task]').forEach(el=>{
+    el.addEventListener('change', async ()=>{
+      const projId = el.getAttribute('data-tt-project');
+      const taskId = el.getAttribute('data-tt-task');
+      const all = allProjectsFlat();
+      const found = all.find(x=>x.project.id===projId);
+      const t = found.project.tasks.find(x=>x.id===taskId);
+      t.done = el.checked;
+      await saveData();
+      renderTasks();
+    });
+  });
+}
+
+/* ---------------- Nav / shell ---------------- */
+function setActiveNav(tab){
+  document.querySelectorAll('#mainNav button').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-tab')===tab);
+  });
+}
+
+function renderTab(){
+  if(currentTab==='dashboard') renderDashboard();
+  else if(currentTab==='prep') renderPrep();
+  else if(currentTab==='exchange') renderExchange();
+  else if(currentTab==='tasks') renderTasks();
+  renderHeroStats();
+}
+
+document.getElementById('mainNav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  currentTab = btn.getAttribute('data-tab');
+  setActiveNav(currentTab);
+  renderTab();
+});
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(confirm('Clear all session notes and prep items? Your regions, projects, statuses, tasks and photos stay exactly as they are.')){
+    DATA.regions.forEach(r=>{ r.log = []; });
+    DATA.global.log = [];
+    DATA.prepItems = [];
+    await saveData();
+    renderTab();
+  }
+});
+
+async function doExportBackup(){
+  const bundle = {version:1, exportedAt:new Date().toISOString(), data:DATA, images:{}};
+  const flat = allProjectsFlat();
+  for(const {project} of flat){
+    if(project.hasImage){
+      const img = await loadProjectImage(project.id);
+      if(img) bundle.images[project.id] = img;
+    }
+  }
+  const blob = new Blob([JSON.stringify(bundle)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'spi-exchange-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  try{ localStorage.setItem('spi_lastBackupAt', new Date().toISOString()); }catch(e){}
+  checkBackupReminder();
+}
+
+function checkBackupReminder(){
+  const banner = document.getElementById('backupBanner');
+  if(!banner) return;
+  if(sessionStorage.getItem('spi_backup_dismissed')==='1'){ banner.style.display='none'; return; }
+  let last = null;
+  try{ last = localStorage.getItem('spi_lastBackupAt'); }catch(e){}
+  const days = last ? (Date.now()-new Date(last).getTime())/86400000 : Infinity;
+  if(days > 10){
+    banner.querySelector('.msg').textContent = isFinite(days)
+      ? `It's been ${Math.floor(days)} days since your last backup — worth exporting one.`
+      : "You haven't exported a backup yet. As a safety net alongside the shared database, it's worth having a local copy.";
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', doExportBackup);
+document.getElementById('bannerExportBtn').addEventListener('click', doExportBackup);
+document.getElementById('bannerDismissBtn').addEventListener('click', ()=>{
+  try{ sessionStorage.setItem('spi_backup_dismissed','1'); }catch(e){}
+  document.getElementById('backupBanner').style.display = 'none';
+});
+
+document.getElementById('importInput').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    try{
+      const bundle = JSON.parse(reader.result);
+      if(!bundle.data || !bundle.data.regions) throw new Error('invalid backup file');
+      if(!confirm('Import this backup? It will replace everything currently in this tool (projects, notes, prep, photos).')) return;
+      DATA = bundle.data;
+      normalizeData();
+      await saveData();
+      for(const pid in (bundle.images||{})){
+        await saveProjectImage(pid, bundle.images[pid]);
+      }
+      currentTab = 'dashboard';
+      setActiveNav('dashboard');
+      renderTab();
+      alert('Backup imported.');
+    }catch(err){
+      alert('Could not read that backup file — is it a SPI Exchange export?');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+(async function init(){
+  await loadData();
+  exchangeStops = ['eur','buz','gcr','mai','ams','global'];
+  renderTab();
+  checkBackupReminder();
+  attachRealtimeSync();
+})();
+</script>
+</body>
+</html>
