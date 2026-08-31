@@ -289,6 +289,7 @@ footer button{background:none;border:none;color:var(--ink-soft);text-decoration:
   <span id="storageNotice">Connecting…</span>
   <span id="saveStatus" class="save-status"></span>
   <span class="footer-actions">
+    <button id="whoAmIBtn">Wer bist du?</button>
     <button id="exportBtn">Export backup</button>
     <label class="footer-link">Import backup<input type="file" id="importInput" accept="application/json"></label>
     <button id="resetBtn">Clear session notes &amp; prep</button>
@@ -341,6 +342,57 @@ let usingLocalFallback = false;
    through a Postgres RPC function that checks the team passphrase
    server-side (never stored anywhere readable) — see getTeamPass()/sbWrite().
    localStorage is kept as an offline cache/fallback only. */
+const KNOWN_USERS = ['Fabio Saxer','Jris Niedermann','Lucia Manatschal','Yan Chen','Sudhir Punyamurthula','Roman Heuberger','Fabio Keller'];
+let currentUser = null;
+function showUserModal(){
+  return new Promise(resolve=>{
+    const old = document.getElementById('userModalOverlay');
+    if(old) old.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'userModalOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,34,41,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:var(--white,#fff);border-radius:14px;padding:24px;max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:'Inter',sans-serif;">
+        <h3 style="margin:0 0 8px;font-size:16px;font-family:'Fraunces',serif;">Wer bist du?</h3>
+        <p style="font-size:13px;color:var(--ink-soft,#4b5c60);margin:0 0 14px;">Damit Notizen der richtigen Person zugeordnet werden können.</p>
+        <div id="userModalList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;">
+          ${KNOWN_USERS.map(name=>`<button type="button" class="userModalPick" data-name="${escapeHtml(name)}" style="border:1px solid var(--line,#e2e3d9);background:var(--paper,#fbfbf7);color:var(--ink,#122229);padding:9px 12px;border-radius:8px;font-size:13.5px;text-align:left;cursor:pointer;font-family:inherit;">${escapeHtml(name)}</button>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+          <button type="button" id="userModalCancel" style="border:none;background:var(--paper-dim,#f2f1ea);color:var(--ink-soft,#4b5c60);padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;">Abbrechen</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    function finish(val){ overlay.remove(); resolve(val); }
+    overlay.querySelectorAll('.userModalPick').forEach(btn=>{
+      btn.addEventListener('click', ()=>finish(btn.getAttribute('data-name')));
+    });
+    document.getElementById('userModalCancel').addEventListener('click', ()=>finish(''));
+  });
+}
+async function getCurrentUser(){
+  if(currentUser) return currentUser;
+  try{ currentUser = localStorage.getItem('spi_currentUser') || ''; }catch(e){}
+  if(!currentUser){
+    currentUser = await showUserModal();
+    if(currentUser){ try{ localStorage.setItem('spi_currentUser', currentUser); }catch(e){} }
+  }
+  updateWhoAmI();
+  return currentUser;
+}
+async function changeCurrentUser(){
+  const picked = await showUserModal();
+  if(picked){
+    currentUser = picked;
+    try{ localStorage.setItem('spi_currentUser', picked); }catch(e){}
+    updateWhoAmI();
+  }
+}
+function updateWhoAmI(){
+  const el = document.getElementById('whoAmIBtn');
+  if(!el) return;
+  el.textContent = currentUser ? ('Angemeldet als: '+currentUser) : 'Wer bist du?';
+}
 let teamPass = null;
 function showPassModal(){
   return new Promise(resolve=>{
@@ -467,10 +519,11 @@ function normalizeData(){
       if(typeof p.hasImage!=='boolean') p.hasImage = false;
       if(!p.tasks) p.tasks = [];
       if(typeof p.notes!=='string') p.notes = '';
+      if(typeof p.notesAuthor!=='string') p.notesAuthor = p.notes.trim() ? 'Fabio Saxer' : '';
       if(typeof p.lead!=='string') p.lead = '';
     });
   };
-  const fixLog = (arr)=>{ (arr||[]).forEach(l=>{ if(!l.id) l.id = uid('log'); }); };
+  const fixLog = (arr)=>{ (arr||[]).forEach(l=>{ if(!l.id) l.id = uid('log'); if(typeof l.author!=='string') l.author = ''; }); };
   DATA.regions.forEach(r=>{ fixProjects(r.projects); fixLog(r.log); });
   fixProjects(DATA.global.projects); fixLog(DATA.global.log);
   if(!DATA.prepItems) DATA.prepItems = [];
@@ -660,6 +713,7 @@ function projectCardHtml(p, ownerKey, opts){
       <select class="status-select st-${STATUS_CLASS[p.status]}" data-action="set-status" data-owner="${ownerKey}" data-project="${p.id}">${statusOptions}</select>
     </div>
     <textarea placeholder="Notes from the exchange..." data-action="set-notes" data-owner="${ownerKey}" data-project="${p.id}">${escapeHtml(p.notes||'')}</textarea>
+    ${p.notes && p.notesAuthor ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">— ${escapeHtml(p.notesAuthor)}</div>` : ''}
     ${p.hasImage?`<div class="pcard-image-wrap" data-project-image="${p.id}"><div class="img-loading">Loading photo…</div></div>`:''}
     <div class="photo-row">
       <label class="photo-label">${p.hasImage?'Replace photo':'+ Add photo'}<input type="file" accept="image/*" data-action="upload-image" data-owner="${ownerKey}" data-project="${p.id}"></label>
@@ -833,7 +887,7 @@ function renderExchange(){
   (stop.log||[]).slice().reverse().forEach(l=>{
     html += `<div class="log-entry" data-log="${l.id}">
       <div class="log-entry-head">
-        <div class="log-date">${l.date}</div>
+        <div class="log-date">${l.date}${l.author?' · '+escapeHtml(l.author):''}</div>
         <div class="log-actions">
           <button data-action="edit-log" data-log="${l.id}">Edit</button>
           <button class="danger" data-action="delete-log" data-log="${l.id}">Delete</button>
@@ -877,8 +931,15 @@ function attachExchangeEvents(stopId, isGlobal){
     el.addEventListener('blur', async ()=>{
       const arr = findProjectArr(el.getAttribute('data-owner'));
       const p = arr.find(x=>x.id===el.getAttribute('data-project'));
-      p.notes = el.value;
+      const val = el.value;
+      if(val.trim() && val !== p.notes){
+        p.notesAuthor = await getCurrentUser();
+      } else if(!val.trim()){
+        p.notesAuthor = '';
+      }
+      p.notes = val;
       await saveData();
+      renderExchange();
     });
   });
 
@@ -1080,7 +1141,8 @@ function attachExchangeEvents(stopId, isGlobal){
       const input = document.getElementById('sessionNoteInput');
       const text = input.value.trim();
       if(!text) return;
-      const entry = {id:uid('log'), date:new Date().toISOString().slice(0,10), text};
+      const author = await getCurrentUser();
+      const entry = {id:uid('log'), date:new Date().toISOString().slice(0,10), text, author};
       if(isGlobal){ DATA.global.log = DATA.global.log||[]; DATA.global.log.push(entry); }
       else { const r = DATA.regions.find(x=>x.id===stopId); r.log = r.log||[]; r.log.push(entry); }
       await saveData();
@@ -1386,7 +1448,11 @@ document.getElementById('importInput').addEventListener('change', (e)=>{
   reader.readAsText(file);
 });
 
+document.getElementById('whoAmIBtn').addEventListener('click', changeCurrentUser);
+
 (async function init(){
+  try{ currentUser = localStorage.getItem('spi_currentUser') || ''; }catch(e){}
+  updateWhoAmI();
   await loadData();
   exchangeStops = ['eur','buz','gcr','mai','ams','global'];
   renderTab();
