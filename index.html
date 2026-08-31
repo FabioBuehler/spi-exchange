@@ -243,16 +243,6 @@ footer button{background:none;border:none;color:var(--ink-soft);text-decoration:
 .footer-link input[type=file]{display:none;}
 .save-status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal-700);min-width:70px;transition:opacity .3s;}
 
-.banner-wrap{max-width:1100px;margin:0 auto;padding:0 28px;}
-.backup-banner{
-  display:none;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  background:#fbf6d9;border:1px solid var(--yellow-400);color:var(--ink);border-radius:12px;
-  padding:12px 18px;margin:0 0 20px;font-size:13px;
-}
-.backup-banner .banner-actions{display:flex;gap:14px;flex-shrink:0;}
-.backup-banner button{border:none;background:none;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--teal-900);text-decoration:underline;padding:0;}
-.backup-banner button#bannerDismissBtn{color:var(--ink-soft);font-weight:500;}
-
 @media (max-width:640px){
   .hero-inner{padding:32px 18px 0;}
   .nav-wrap{padding:0 18px;}
@@ -289,16 +279,6 @@ footer button{background:none;border:none;color:var(--ink-soft);text-decoration:
     <button data-tab="prep">Prep</button>
     <button data-tab="exchange">Exchange Mode</button>
     <button data-tab="tasks">Follow-up Tasks</button>
-  </div>
-</div>
-
-<div class="banner-wrap">
-  <div class="backup-banner" id="backupBanner">
-    <span class="msg"></span>
-    <span class="banner-actions">
-      <button id="bannerExportBtn">Export now</button>
-      <button id="bannerDismissBtn">Not now</button>
-    </span>
   </div>
 </div>
 
@@ -1374,33 +1354,9 @@ async function doExportBackup(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  try{ localStorage.setItem('spi_lastBackupAt', new Date().toISOString()); }catch(e){}
-  checkBackupReminder();
-}
-
-function checkBackupReminder(){
-  const banner = document.getElementById('backupBanner');
-  if(!banner) return;
-  if(sessionStorage.getItem('spi_backup_dismissed')==='1'){ banner.style.display='none'; return; }
-  let last = null;
-  try{ last = localStorage.getItem('spi_lastBackupAt'); }catch(e){}
-  const days = last ? (Date.now()-new Date(last).getTime())/86400000 : Infinity;
-  if(days > 10){
-    banner.querySelector('.msg').textContent = isFinite(days)
-      ? `It's been ${Math.floor(days)} days since your last backup — worth exporting one.`
-      : "You haven't exported a backup yet. As a safety net alongside the shared database, it's worth having a local copy.";
-    banner.style.display = 'flex';
-  } else {
-    banner.style.display = 'none';
-  }
 }
 
 document.getElementById('exportBtn').addEventListener('click', doExportBackup);
-document.getElementById('bannerExportBtn').addEventListener('click', doExportBackup);
-document.getElementById('bannerDismissBtn').addEventListener('click', ()=>{
-  try{ sessionStorage.setItem('spi_backup_dismissed','1'); }catch(e){}
-  document.getElementById('backupBanner').style.display = 'none';
-});
 
 document.getElementById('importInput').addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
@@ -1433,7 +1389,6 @@ document.getElementById('importInput').addEventListener('change', (e)=>{
   await loadData();
   exchangeStops = ['eur','buz','gcr','mai','ams','global'];
   renderTab();
-  checkBackupReminder();
   attachRealtimeSync();
 })();
 </script>
