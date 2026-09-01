@@ -284,12 +284,16 @@ footer button{background:none;border:none;color:var(--ink-soft);text-decoration:
 .save-status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal-700);min-width:70px;transition:opacity .3s;}
 
 @media (max-width:640px){
+  .hero{padding-bottom:150px;}
   .hero-inner{padding:32px 18px 0;}
   .hero-profile{position:static;display:inline-block;margin-bottom:14px;}
-  .nav-wrap{padding:0 18px;}
+  .nav-wrap{padding:0 18px;overflow-x:auto;}
+  .nav{width:max-content;}
   .container{padding:26px 18px 60px;}
   .rcard-top{flex-direction:column;gap:8px;}
   .region-grid{grid-template-columns:1fr;}
+  .section-title{flex-direction:column;align-items:flex-start;gap:2px;}
+  .nav button{font-size:12px;padding:9px 12px;}
 }
 </style>
 </head>
