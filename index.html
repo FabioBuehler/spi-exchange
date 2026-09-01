@@ -570,7 +570,7 @@ function normalizeData(){
   DATA.prepItems.forEach(i=>{
     if(typeof i.author!=='string') i.author = 'Fabio Saxer';
     if(i.scope==='all'){
-      if(!Array.isArray(i.doneIn)) i.doneIn = i.done ? PREP_STOPS.slice() : [];
+      if(!Array.isArray(i.doneIn)) i.doneIn = i.done ? ALL_SCOPE_STOPS.slice() : [];
     } else {
       if(typeof i.done!=='boolean') i.done = false;
     }
@@ -613,6 +613,10 @@ function archivedOnly(projects){ return projects.filter(p=>p.archived); }
 
 const PREP_SCOPES = ['all','eur','buz','gcr','mai','ams','global'];
 const PREP_STOPS = ['eur','buz','gcr','mai','ams','global'];
+/* EUR and GLOBAL have no separate, single responsible person (Fabio Saxer covers
+   both already) — "applies to all regions" prep items are only relevant to the
+   four regions that have their own dedicated lead. */
+const ALL_SCOPE_STOPS = ['buz','gcr','mai','ams'];
 function scopeLabel(scope){
   if(scope==='all') return 'All regions';
   if(scope==='global') return 'Global';
@@ -628,7 +632,7 @@ function stopLabel(stopId){
   return r ? r.code : stopId;
 }
 function isPrepFullyDone(item){
-  if(item.scope==='all') return (item.doneIn||[]).length >= PREP_STOPS.length;
+  if(item.scope==='all') return (item.doneIn||[]).length >= ALL_SCOPE_STOPS.length;
   return !!item.done;
 }
 function isPrepDoneForStop(item, stopId){
@@ -874,11 +878,11 @@ function renderExchange(){
     </div>
   </div>`;
 
-  const relevantPrep = DATA.prepItems.filter(i=>!isPrepDoneForStop(i, stopId) && (i.scope==='all' || i.scope===stopId));
+  const relevantPrep = DATA.prepItems.filter(i=>!isPrepDoneForStop(i, stopId) && ((i.scope==='all' && ALL_SCOPE_STOPS.includes(stopId)) || i.scope===stopId));
   html += `<div class="panel"><h4>Prep — things to raise</h4>`;
   if(relevantPrep.length){
     relevantPrep.forEach(i=>{
-      const progress = i.scope==='all' ? ` <span class="mono" style="font-size:10px;color:var(--ink-soft);">(all regions — ${(i.doneIn||[]).length}/${PREP_STOPS.length} addressed)</span>` : '';
+      const progress = i.scope==='all' ? ` <span class="mono" style="font-size:10px;color:var(--ink-soft);">(all regions — ${(i.doneIn||[]).length}/${ALL_SCOPE_STOPS.length} addressed)</span>` : '';
       html += `<div class="prep-row" data-prep="${i.id}">
         <input type="checkbox" data-action="check-prep" data-prep="${i.id}">
         <span style="flex:1;">${escapeHtml(i.text)}${progress}</span>
@@ -1265,8 +1269,8 @@ function renderPrep(){
   </div>`;
 
   let any = false;
-  allowedPrepScopes(currentUser).forEach(scope=>{
-    let items = DATA.prepItems.filter(i=>i.scope===scope);
+  PREP_SCOPES.forEach(scope=>{
+    let items = DATA.prepItems.filter(i=>i.scope===scope && i.author===currentUser);
     if(prepFilter==='open') items = items.filter(i=>!isPrepFullyDone(i));
     if(prepFilter==='done') items = items.filter(i=>isPrepFullyDone(i));
     if(!items.length) return;
@@ -1282,7 +1286,7 @@ function renderPrep(){
             <button class="del" data-action="delete-prep" data-prep="${i.id}">&times;</button>
           </div>
           <div class="prep-region-grid">
-            ${PREP_STOPS.map(sid=>`<label class="prep-region-chip ${doneIn.includes(sid)?'checked':''}">
+            ${ALL_SCOPE_STOPS.map(sid=>`<label class="prep-region-chip ${doneIn.includes(sid)?'checked':''}">
               <input type="checkbox" ${doneIn.includes(sid)?'checked':''} data-action="toggle-prep-region" data-prep="${i.id}" data-stop="${sid}">
               ${stopLabel(sid)}
             </label>`).join('')}
