@@ -342,10 +342,35 @@ function defaultData(){
   return JSON.parse(JSON.stringify(SEED_DATA));
 }
 
+const ALL_STOPS = ['eur','buz','gcr','mai','ams','global'];
+const REGION_ACCESS = {
+  'Fabio Saxer':'all',
+  'Jris Niedermann':'all',
+  'Lucia Manatschal':['ams'],
+  'Sudhir Punyamurthula':['mai'],
+  'Yan Chen':['gcr'],
+  'Roman Heuberger':['buz'],
+  'Fabio Keller':['buz']
+};
+function isRegionAllowed(regionId, user){
+  const acc = REGION_ACCESS[user];
+  if(!user || !acc || acc==='all') return true;
+  return acc.includes(regionId);
+}
+function allowedStopsFor(user){
+  const acc = REGION_ACCESS[user];
+  if(!user || !acc || acc==='all') return ALL_STOPS.slice();
+  return acc.concat('global');
+}
+function allowedPrepScopes(user){
+  return PREP_SCOPES.filter(s=> s==='all' || s==='global' || isRegionAllowed(s, user));
+}
+
 let DATA = null;
 let currentTab = 'dashboard';
 let exchangeStops = [];
 let exchangeIdx = 0;
+let pendingStopId = null;
 let taskFilter = 'open';
 let prepFilter = 'open';
 let usingLocalFallback = false;
@@ -400,6 +425,8 @@ async function changeCurrentUser(){
     currentUser = picked;
     try{ localStorage.setItem('spi_currentUser', picked); }catch(e){}
     updateWhoAmI();
+    exchangeIdx = 0;
+    if(DATA) renderTab();
   }
 }
 function updateWhoAmI(){
@@ -592,8 +619,8 @@ function scopeLabel(scope){
   const r = DATA.regions.find(x=>x.id===scope);
   return r ? r.code : scope;
 }
-function scopeOptionsHtml(selected){
-  return PREP_SCOPES.map(s=>`<option value="${s}" ${s===selected?'selected':''}>${scopeLabel(s)}</option>`).join('');
+function scopeOptionsHtml(selected, scopes){
+  return (scopes||PREP_SCOPES).map(s=>`<option value="${s}" ${s===selected?'selected':''}>${scopeLabel(s)}</option>`).join('');
 }
 function stopLabel(stopId){
   if(stopId==='global') return 'GLOBAL';
@@ -671,12 +698,13 @@ function renderDashboard(){
 
   document.getElementById('container').innerHTML = html;
   document.querySelectorAll('.rcard[data-region]').forEach(el=>{
-    el.addEventListener('click', ()=>{
+    el.addEventListener('click', async ()=>{
       const rid = el.getAttribute('data-region');
+      const user = await getCurrentUser();
+      if(!user) return;
+      pendingStopId = rid;
       currentTab='exchange';
       setActiveNav('exchange');
-      exchangeIdx = exchangeStops.indexOf(rid);
-      if(exchangeIdx<0) exchangeIdx=0;
       renderTab();
     });
   });
@@ -817,7 +845,14 @@ async function loadCardImages(){
 }
 
 function renderExchange(){
-  exchangeStops = ['eur','buz','gcr','mai','ams','global'];
+  exchangeStops = allowedStopsFor(currentUser);
+  if(pendingStopId){
+    const idx = exchangeStops.indexOf(pendingStopId);
+    exchangeIdx = idx>=0 ? idx : 0;
+    pendingStopId = null;
+  } else if(exchangeIdx>=exchangeStops.length || exchangeIdx<0){
+    exchangeIdx = 0;
+  }
   const stopId = exchangeStops[exchangeIdx];
   const stop = getStopData(stopId);
 
@@ -1219,7 +1254,7 @@ function renderPrep(){
   let html = `<div class="section-title"><h2>Meeting Prep</h2><span>things to bring up in your next exchanges</span></div>`;
   html += `<div class="prep-add-form">
     <input type="text" id="prepNewText" placeholder="Something to raise...">
-    <select id="prepNewScope">${scopeOptionsHtml('all')}</select>
+    <select id="prepNewScope">${scopeOptionsHtml('all', allowedPrepScopes(currentUser))}</select>
     <button id="prepAddBtn">Add</button>
   </div>`;
 
@@ -1230,7 +1265,7 @@ function renderPrep(){
   </div>`;
 
   let any = false;
-  PREP_SCOPES.forEach(scope=>{
+  allowedPrepScopes(currentUser).forEach(scope=>{
     let items = DATA.prepItems.filter(i=>i.scope===scope);
     if(prepFilter==='open') items = items.filter(i=>!isPrepFullyDone(i));
     if(prepFilter==='done') items = items.filter(i=>isPrepFullyDone(i));
@@ -1333,7 +1368,10 @@ function renderTasks(){
   </div>`;
 
   const groups = [];
-  DATA.regions.forEach(r=>groups.push({label:r.code+' — '+r.name.split('(')[0].trim(), projects:r.projects}));
+  DATA.regions.forEach(r=>{
+    if(!isRegionAllowed(r.id, currentUser)) return;
+    groups.push({label:r.code+' — '+r.name.split('(')[0].trim(), projects:r.projects});
+  });
   groups.push({label:'GLOBAL — Global Coordinated Projects', projects:DATA.global.projects});
 
   let any = false;
@@ -1398,10 +1436,15 @@ function renderTab(){
   renderHeroStats();
 }
 
-document.getElementById('mainNav').addEventListener('click', (e)=>{
+document.getElementById('mainNav').addEventListener('click', async (e)=>{
   const btn = e.target.closest('button[data-tab]');
   if(!btn) return;
-  currentTab = btn.getAttribute('data-tab');
+  const tab = btn.getAttribute('data-tab');
+  if(tab !== 'dashboard'){
+    const user = await getCurrentUser();
+    if(!user) return;
+  }
+  currentTab = tab;
   setActiveNav(currentTab);
   renderTab();
 });
@@ -1471,7 +1514,6 @@ document.getElementById('whoAmIBtn').addEventListener('click', changeCurrentUser
   try{ currentUser = localStorage.getItem('spi_currentUser') || ''; }catch(e){}
   updateWhoAmI();
   await loadData();
-  exchangeStops = ['eur','buz','gcr','mai','ams','global'];
   renderTab();
   attachRealtimeSync();
 })();
