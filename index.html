@@ -171,15 +171,13 @@ select.status-select{
 .st-stopped{background:var(--stopped);border:1px dashed rgba(255,255,255,.35) !important;}
 
 .pcard textarea{
-  width:100%;margin-top:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+  width:100%;margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
   font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:38px;background:var(--white);color:var(--ink);
 }
-.notes-row{display:flex;gap:8px;align-items:stretch;margin-top:10px;}
-.notes-row textarea{flex:1;}
-.notes-author{
-  flex-shrink:0;width:32px;display:flex;align-items:center;justify-content:center;
+.author-badge{
+  flex-shrink:0;width:28px;height:24px;display:flex;align-items:center;justify-content:center;
   background:var(--paper-dim);border:1px solid var(--line);border-radius:8px;
-  font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;color:var(--teal-900);
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;color:var(--teal-900);
   letter-spacing:.02em;
 }
 .tasklist{margin-top:10px;}
@@ -535,7 +533,6 @@ function normalizeData(){
       if(typeof p.hasImage!=='boolean') p.hasImage = false;
       if(!p.tasks) p.tasks = [];
       if(typeof p.notes!=='string') p.notes = '';
-      if(typeof p.notesAuthor!=='string') p.notesAuthor = p.notes.trim() ? 'Fabio Saxer' : '';
       if(typeof p.lead!=='string') p.lead = '';
     });
   };
@@ -544,6 +541,7 @@ function normalizeData(){
   fixProjects(DATA.global.projects); fixLog(DATA.global.log);
   if(!DATA.prepItems) DATA.prepItems = [];
   DATA.prepItems.forEach(i=>{
+    if(typeof i.author!=='string') i.author = 'Fabio Saxer';
     if(i.scope==='all'){
       if(!Array.isArray(i.doneIn)) i.doneIn = i.done ? PREP_STOPS.slice() : [];
     } else {
@@ -728,10 +726,7 @@ function projectCardHtml(p, ownerKey, opts){
       </div>
       <select class="status-select st-${STATUS_CLASS[p.status]}" data-action="set-status" data-owner="${ownerKey}" data-project="${p.id}">${statusOptions}</select>
     </div>
-    <div class="notes-row">
-      <textarea placeholder="Notes from the exchange..." data-action="set-notes" data-owner="${ownerKey}" data-project="${p.id}">${escapeHtml(p.notes||'')}</textarea>
-      ${p.notes && p.notesAuthor ? `<div class="notes-author" title="${escapeHtml(p.notesAuthor)}">${escapeHtml(initials(p.notesAuthor))}</div>` : ''}
-    </div>
+    <textarea placeholder="Notes from the exchange..." data-action="set-notes" data-owner="${ownerKey}" data-project="${p.id}">${escapeHtml(p.notes||'')}</textarea>
     ${p.hasImage?`<div class="pcard-image-wrap" data-project-image="${p.id}"><div class="img-loading">Loading photo…</div></div>`:''}
     <div class="photo-row">
       <label class="photo-label">${p.hasImage?'Replace photo':'+ Add photo'}<input type="file" accept="image/*" data-action="upload-image" data-owner="${ownerKey}" data-project="${p.id}"></label>
@@ -852,6 +847,7 @@ function renderExchange(){
       html += `<div class="prep-row" data-prep="${i.id}">
         <input type="checkbox" data-action="check-prep" data-prep="${i.id}">
         <span style="flex:1;">${escapeHtml(i.text)}${progress}</span>
+        ${i.author?`<div class="author-badge" title="${escapeHtml(i.author)}">${escapeHtml(initials(i.author))}</div>`:''}
       </div>`;
     });
   } else {
@@ -955,15 +951,8 @@ function attachExchangeEvents(stopId, isGlobal){
     el.addEventListener('blur', async ()=>{
       const arr = findProjectArr(el.getAttribute('data-owner'));
       const p = arr.find(x=>x.id===el.getAttribute('data-project'));
-      const val = el.value;
-      if(val.trim() && val !== p.notes){
-        p.notesAuthor = await getCurrentUser();
-      } else if(!val.trim()){
-        p.notesAuthor = '';
-      }
-      p.notes = val;
+      p.notes = el.value;
       await saveData();
-      renderExchange();
     });
   });
 
@@ -1116,7 +1105,8 @@ function attachExchangeEvents(stopId, isGlobal){
       const text = input.value.trim();
       if(!text) { input.focus(); return; }
       const scope = allChecked ? 'all' : stopId;
-      DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10)});
+      const author = await getCurrentUser();
+      DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10), author});
       await saveData();
       renderExchange();
     });
@@ -1253,6 +1243,7 @@ function renderPrep(){
         html += `<div class="prep-row-all" data-prep="${i.id}">
           <div class="prep-row" style="border-bottom:none;">
             <input type="text" class="prep-text-input" value="${escapeHtml(i.text)}" data-action="edit-prep" data-prep="${i.id}">
+            ${i.author?`<div class="author-badge" title="${escapeHtml(i.author)}">${escapeHtml(initials(i.author))}</div>`:''}
             <button class="del" data-action="delete-prep" data-prep="${i.id}">&times;</button>
           </div>
           <div class="prep-region-grid">
@@ -1266,6 +1257,7 @@ function renderPrep(){
         html += `<div class="prep-row ${i.done?'done':''}" data-prep="${i.id}">
           <input type="checkbox" ${i.done?'checked':''} data-action="toggle-prep" data-prep="${i.id}">
           <input type="text" class="prep-text-input" value="${escapeHtml(i.text)}" data-action="edit-prep" data-prep="${i.id}">
+          ${i.author?`<div class="author-badge" title="${escapeHtml(i.author)}">${escapeHtml(initials(i.author))}</div>`:''}
           <button class="del" data-action="delete-prep" data-prep="${i.id}">&times;</button>
         </div>`;
       }
@@ -1287,7 +1279,8 @@ function renderPrep(){
     const scope = document.getElementById('prepNewScope').value;
     const text = input.value.trim();
     if(!text) { input.focus(); return; }
-    DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10)});
+    const author = await getCurrentUser();
+    DATA.prepItems.push({id:uid('prep'), text, scope, done:false, doneIn:[], created:new Date().toISOString().slice(0,10), author});
     await saveData();
     renderPrep();
   });
